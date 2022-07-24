@@ -121,16 +121,21 @@ class TD:
         return steps, episode_num
 
     def show_values(self) -> None:
+        cmap = ListedColormap(["#00000000", "skyblue", "pink", "black"])
+        plt.figure(figsize=(10, 10))
         plt.gca().set_aspect("equal")
         plt.xticks([])
         plt.yticks([])
         plt.gca().invert_yaxis()
         plt.pcolormesh(self.values, cmap="Reds", edgecolors="gray", linewidth=0.1)
+        plt.pcolormesh(self.field, cmap=cmap, edgecolors="gray", linewidth=0.1)
         plt.show()
+        plt.tight_layout()
+        plt.savefig(f"TD_values_{str(self.epsilon)[2:]}.png", dpi=150)
 
     def show_log(self) -> None:
         cmap = ListedColormap(["white", "skyblue", "pink", "black"])
-        _, ax = plt.subplots()
+        _, ax = plt.subplots(figsize=(10, 10))
         ax.set_aspect("equal")
         ax.set_xticks([])
         ax.set_yticks([])
@@ -150,6 +155,8 @@ class TD:
             prev_pos = pos
         plt.gca().invert_yaxis()
         plt.show()
+        plt.tight_layout()
+        plt.savefig(f"TD_log_{str(self.epsilon)[2:]}.png", dpi=150)
 
 
 if __name__ == "__main__":
@@ -163,10 +170,13 @@ if __name__ == "__main__":
     steps, episode_num = td.train()
     td.show_values()
     td.show_log()
-    _, ax = plt.subplots()
+
+    _, ax = plt.subplots(figsize=(10, 6))
     ax.plot(np.arange(episode_num), steps, "-")
-    ax.set_title(r"Learning curve of $\epsilon$-greedy TD(0)", size=18)
+    ax.set_title(rf"Learning curve of $\epsilon$-greedy TD(0) ($\epsilon={{{epsilon}}}$)", size=18)
     ax.set_xlabel("the number of episodes", size=15)
     ax.set_ylabel("the number of steps", size=15)
-    ax.text(0.65, 0.3, f"final step: {steps[-1]}", transform=ax.transAxes, size=15)
+    ax.text(0.7, 0.2, f"final step: {steps[-1]}", transform=ax.transAxes, size=18)
     plt.show()
+    plt.tight_layout()
+    plt.savefig(f"TD_learning_{str(epsilon)[2:]}.png", dpi=150)

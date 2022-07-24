@@ -125,6 +125,7 @@ class QLearning:
 
     def show_q_values(self) -> None:
         cmap = ListedColormap(["#00000000", "skyblue", "pink", "black"])
+        plt.figure(figsize=(10, 10))
         plt.gca().set_aspect("equal")
         plt.xticks([])
         plt.yticks([])
@@ -148,6 +149,8 @@ class QLearning:
                 plt.pcolormesh(grid + x, grid + y, box, cmap="Greens", edgecolors="lightgray", linewidth=0.05)
         plt.pcolormesh(np.arange(w) + 0.5, np.arange(h) + 0.5, self.field, cmap=cmap, edgecolors="gray", linewidth=0.1)
         plt.show()
+        plt.tight_layout()
+        plt.savefig(f"Q_values_{str(self.epsilon)[2:]}.png", dpi=150)
 
     def show_log(self) -> None:
         cmap = ListedColormap(["white", "skyblue", "pink", "black"])
@@ -171,6 +174,8 @@ class QLearning:
             prev_pos = pos
         plt.gca().invert_yaxis()
         plt.show()
+        plt.tight_layout()
+        plt.savefig(f"Q_log_{str(self.epsilon)[2:]}.png", dpi=150)
 
 
 if __name__ == "__main__":
@@ -184,10 +189,13 @@ if __name__ == "__main__":
     steps, episode_num = q_learning.train()
     q_learning.show_q_values()
     q_learning.show_log()
-    _, ax = plt.subplots()
-    ax.set_title(r"Learning curve of Q-learning", size=18)
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    ax.set_title(rf"Learning curve of Q-learning ($\epsilon={{{epsilon}}}$)", size=18)
     ax.plot(np.arange(episode_num), steps, "-")
     ax.set_xlabel("the number of episodes", size=15)
     ax.set_ylabel("the number of steps", size=15)
-    ax.text(0.65, 0.3, f"final step: {steps[-1]}", transform=ax.transAxes, size=15)
+    ax.text(0.7, 0.2, f"final step: {steps[-1]}", transform=ax.transAxes, size=18)
     plt.show()
+    plt.tight_layout()
+    plt.savefig(f"Q_learning_{str(epsilon)[2:]}.png", dpi=150)

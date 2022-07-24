@@ -35,9 +35,8 @@ class Field:
     def shape(self) -> tuple[int, int]:
         return self.field.shape
 
-    def _convert_line(self, line: str) -> np.ndarray:
-        hoge = line.replace("S", str(Field.start)).replace("G", str(Field.goal)).replace(" ", str(Field.road)).replace("#", str(Field.wall))
-        return hoge
+    def _convert_line(self, line: str) -> str:
+        return line.replace("S", str(Field.start)).replace("G", str(Field.goal)).replace(" ", str(Field.road)).replace("#", str(Field.wall))
 
     def is_goal(self, pos: tuple[int, int]) -> bool:
         return self.field[pos] == Field.goal
@@ -57,7 +56,7 @@ class Field:
 
     def show_log(self, log: list[tuple[int, int]]) -> None:
         cmap = ListedColormap(["white", "skyblue", "pink", "black"])
-        _, ax = plt.subplots()
+        _, ax = plt.subplots(figsize=(10, 10))
         ax.set_aspect("equal")
         ax.set_xticks([])
         ax.set_yticks([])
@@ -77,6 +76,8 @@ class Field:
             prev_pos = pos
         plt.gca().invert_yaxis()
         plt.show()
+        plt.tight_layout()
+        plt.savefig("TD.png", dpi=150)
 
 
 class Agent:
@@ -142,8 +143,8 @@ class TD:
             step += 1
         return step
 
-    def train(self) -> tuple[tuple[int, int], int]:
-        least_repeat = 50
+    def train(self) -> tuple[list[int], int]:
+        least_repeat = 100
         max_repeat = 500
         th = 0.08
         episode_num = 0
@@ -160,16 +161,18 @@ class TD:
             episode_num += 1
         self.field.show_log(self.agent.log)
         self.field.show_values(self.values)
-        return self.agent.log, steps, episode_num
+        return steps, episode_num
 
 
 if __name__ == "__main__":
-    epsilon = 0.5
+    import sys
+
+    epsilon = float(sys.argv[2])
 
     seed(100)
-    field_path = Path("/home/gkinoshita/workspace/lectures/reinforcement/field2.txt")
+    field_path = Path(sys.argv[1])
     td = TD(field_path, epsilon=epsilon)
-    log, steps, episode_num = td.train()
+    steps, episode_num = td.train()
     _, ax = plt.subplots()
     ax.plot(np.arange(episode_num), steps, "-")
     ax.set_title(r"Learning curve of $\epsilon$-greedy TD(0)", size=18)

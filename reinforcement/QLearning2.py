@@ -7,6 +7,13 @@ from matplotlib.colors import ListedColormap
 
 # posは[y, x]の順番
 
+LEFT = 0
+RIGHT = 1
+UP = 2
+DOWN = 3
+
+action2direction: dict[int, tuple[int, int]] = {RIGHT: (0, 1), LEFT: (0, -1), UP: (-1, 0), DOWN: (1, 0)}
+
 
 class Agent:
     def __init__(self) -> None:
@@ -16,7 +23,7 @@ class Agent:
         self.pos = start
 
 
-class TD2:
+class QLearning2:
     road = 0
     goal = 1
     start = 2
@@ -30,7 +37,7 @@ class TD2:
         self.field_path = field_path
         self.read_field()
         h, w = self.field.shape
-        self.values = np.zeros((h, w), dtype=np.float64)
+        self.q_values = np.zeros((h, w, 4), dtype=np.float64)
 
         self.agent = Agent()
         self.initialize()
@@ -49,83 +56,97 @@ class TD2:
     def _convert_line(self, line: str) -> str:
         return line.replace("S", str(self.start)).replace("G", str(self.goal)).replace(" ", str(self.road)).replace("#", str(self.wall))
 
-    def next_positions(self) -> list[tuple[int, int]]:
-        pos_now = self.agent.pos
-        poss = []
-        for direction in [(0, 1), (0, -1), (-1, 0), (1, 0)]:
-            next_pos = (pos_now[0] + direction[0], pos_now[1] + direction[1])
-            if not self.is_wall(next_pos):
-                poss.append(next_pos)
-        return poss
-
     @property
     def start_pos(self) -> tuple[int, int]:
-        start_arr = np.where(self.field == TD2.start)
+        start_arr = np.where(self.field == QLearning2.start)
         return (start_arr[0][0], start_arr[1][0])
 
     def is_wall(self, pos: tuple[int, int]) -> bool:
-        return self.field[pos] == TD2.wall
+        return self.field[pos] == QLearning2.wall
 
     def is_goal(self, pos: tuple[int, int]) -> bool:
-        return self.field[pos] == TD2.goal
+        return self.field[pos] == QLearning2.goal
 
     def initialize(self):
         start_pos = self.start_pos
         self.agent.init_pos(start_pos)
         self.agent.log = [start_pos]  # ゴールまで辿り着くごとにログを初期化
 
-    def act(self) -> tuple[int, int]:
-        poss = self.next_positions()
+    def next_actions(self) -> list[int]:
+        pos_now = self.agent.pos
+        actions = []
+        for action, direction in action2direction.items():
+            next_pos = (pos_now[0] + direction[0], pos_now[1] + direction[1])
+            if not self.is_wall(next_pos):
+                actions.append(action)
+        return actions
+
+    def act(self) -> tuple[int, tuple[int, int]]:
+        actions = self.next_actions()
+        pos = self.agent.pos
+        pos_q_values: np.ndarray = self.q_values[pos][actions]  # get only movable action by indexing with list ([actions])
         if self.epsilon < uniform(0, 1):
-            next_values: list[float] = [(1 if self.is_goal(pos) else 0) + self.gamma * self.values[pos] for pos in poss]
-            # when several actions get the same value, select one from them randomly
-            next_pos_idx = choice([i for i, next_val in enumerate(next_values) if next_val == max(next_values)])
+            action: int = choice([action for action, q_value in zip(actions, pos_q_values) if q_value == max(pos_q_values)])
         else:
-            next_pos_idx = int(uniform(0, 1) * len(poss))
+            action = choice(actions)
 
-        next_pos = poss[next_pos_idx]
+        direction = action2direction[action]
+        next_pos = (pos[0] + direction[0], pos[1] + direction[1])
         self.agent.log.append(next_pos)
-        return next_pos
+        return action, next_pos
 
-    def update(self, next_pos: tuple[int, int]) -> None:
+    def update(self, action: int, next_pos: tuple[int, int]) -> None:
         pos = self.agent.pos
         r = 1 if self.is_goal(next_pos) else 0
-        self.values[pos] += self.alpha * (r + self.gamma * self.values[next_pos] - self.values[pos])
+        self.q_values[pos][action] += self.alpha * (r + self.gamma * max(self.q_values[next_pos]) - self.q_values[pos][action])
         self.agent.pos = next_pos
 
     def episode(self) -> int:
         step = 0
         self.initialize()
         while not self.is_goal(self.agent.pos):
-            next_pos = self.act()
-            self.update(next_pos)
+            action, next_pos = self.act()
+            self.update(action, next_pos)
             step += 1
         return step
 
     def train(self) -> tuple[list[int], int]:
-        least_repeat = 50
-        max_repeat = 500
-        th = 0.1
+        least_repeat = 60
+        prev_values = np.zeros_like(self.q_values)
+        th = 0.01
         episode_num = 0
         steps = []
-        while episode_num < least_repeat:
-            step = self.episode()
-            steps.append(step)
-            episode_num += 1
-        prev_values = np.zeros_like(self.values)
-        while episode_num < max_repeat and np.abs(self.values - prev_values).sum() > th:
-            prev_values = self.values.copy()
+        while episode_num < least_repeat or np.abs(self.q_values - prev_values).sum() > th:
+            prev_values = self.q_values.copy()
             step = self.episode()
             steps.append(step)
             episode_num += 1
         return steps, episode_num
 
-    def show_values(self) -> None:
+    def show_q_values(self) -> None:
+        cmap = ListedColormap(["#00000000", "skyblue", "pink", "black"])
         plt.gca().set_aspect("equal")
         plt.xticks([])
         plt.yticks([])
         plt.gca().invert_yaxis()
-        plt.pcolormesh(self.values, cmap="Reds", edgecolors="gray", linewidth=0.1)
+
+        box = np.zeros((3, 3))
+        h, w, _ = self.q_values.shape
+        for y in np.arange(h):
+            for x in np.arange(w):
+                for action, q_value in enumerate(self.q_values[y, x]):
+                    if action == LEFT:
+                        box[1, 0] = q_value
+                    elif action == RIGHT:
+                        box[1, 2] = q_value
+                    elif action == UP:
+                        box[0, 1] = q_value
+                    else:
+                        box[2, 1] = q_value
+                box_w = 1 / 3
+                grid = np.arange(box_w / 2, 3 * box_w, box_w)
+                plt.pcolormesh(grid + x, grid + y, box, cmap="Greens", edgecolors="lightgray", linewidth=0.05)
+        plt.pcolormesh(np.arange(w) + 0.5, np.arange(h) + 0.5, self.field, cmap=cmap, edgecolors="gray", linewidth=0.1)
         plt.show()
 
     def show_log(self) -> None:
@@ -156,16 +177,16 @@ if __name__ == "__main__":
     import sys
 
     epsilon = float(sys.argv[2])
-
     seed(100)
+
     field_path = Path(sys.argv[1])
-    td = TD2(field_path, epsilon=epsilon)
-    steps, episode_num = td.train()
-    td.show_values()
-    td.show_log()
+    q_learning = QLearning2(field_path, epsilon=epsilon)
+    steps, episode_num = q_learning.train()
+    q_learning.show_q_values()
+    q_learning.show_log()
     _, ax = plt.subplots()
+    ax.set_title(r"Learning curve of Q-learning", size=18)
     ax.plot(np.arange(episode_num), steps, "-")
-    ax.set_title(r"Learning curve of $\epsilon$-greedy TD(0)", size=18)
     ax.set_xlabel("the number of episodes", size=15)
     ax.set_ylabel("the number of steps", size=15)
     ax.text(0.65, 0.3, f"final step: {steps[-1]}", transform=ax.transAxes, size=15)

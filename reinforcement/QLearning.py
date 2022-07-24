@@ -3,7 +3,6 @@ from random import choice, seed, uniform
 
 import matplotlib.pyplot as plt
 import numpy as np
-from cv2 import transform
 from matplotlib.colors import ListedColormap
 
 # posは[y, x]の順番
@@ -43,9 +42,8 @@ class Field:
     def shape(self) -> tuple[int, int]:
         return self.field.shape
 
-    def _convert_line(self, line: str) -> np.ndarray:
-        hoge = line.replace("S", str(Field.start)).replace("G", str(Field.goal)).replace(" ", str(Field.road)).replace("#", str(Field.wall))
-        return hoge
+    def _convert_line(self, line: str) -> str:
+        return line.replace("S", str(Field.start)).replace("G", str(Field.goal)).replace(" ", str(Field.road)).replace("#", str(Field.wall))
 
     def is_goal(self, pos: tuple[int, int]) -> bool:
         return self.field[pos] == Field.goal
@@ -167,7 +165,7 @@ class QLearning:
             step += 1
         return step
 
-    def train(self) -> tuple[tuple[int, int], int]:
+    def train(self) -> tuple[list[int], int]:
         least_repeat = 60
         prev_values = np.zeros_like(self.q_values)
         th = 0.01
@@ -180,14 +178,18 @@ class QLearning:
             episode_num += 1
         self.field.show_log(self.agent.log)
         self.field.show_q_values(self.q_values)
-        return self.agent.log, steps, episode_num
+        return steps, episode_num
 
 
 if __name__ == "__main__":
+    import sys
+
+    epsilon = float(sys.argv[2])
     seed(100)
-    field_path = Path("/home/gkinoshita/workspace/lectures/reinforcement/field2.txt")
-    q_learning = QLearning(field_path, epsilon=0.4)
-    log, steps, episode_num = q_learning.train()
+
+    field_path = Path(sys.argv[1])
+    q_learning = QLearning(field_path, epsilon=epsilon)
+    steps, episode_num = q_learning.train()
     _, ax = plt.subplots()
     ax.set_title(r"Learning curve of Q-learning", size=18)
     ax.plot(np.arange(episode_num), steps, "-")

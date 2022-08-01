@@ -1,6 +1,7 @@
 from pathlib import Path
 from random import choice, seed, uniform
 
+import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import ListedColormap
@@ -111,9 +112,9 @@ class QLearning:
         return step
 
     def train(self) -> tuple[list[int], int]:
-        least_repeat = 60
+        least_repeat = 50
         prev_values = np.zeros_like(self.q_values)
-        th = 0.01
+        th = 0.005
         episode_num = 0
         steps = []
         while episode_num < least_repeat or np.abs(self.q_values - prev_values).sum() > th:
@@ -125,6 +126,7 @@ class QLearning:
 
     def show_q_values(self) -> None:
         cmap = ListedColormap(["#00000000", "skyblue", "pink", "black"])
+        norm = colors.TwoSlopeNorm(vcenter=self.q_values.mean(), vmax=self.q_values.max(), vmin=self.q_values.min())
         plt.figure(figsize=(10, 10))
         plt.gca().set_aspect("equal")
         plt.xticks([])
@@ -146,15 +148,18 @@ class QLearning:
                         box[2, 1] = q_value
                 box_w = 1 / 3
                 grid = np.arange(box_w / 2, 3 * box_w, box_w)
-                plt.pcolormesh(grid + x, grid + y, box, cmap="Greens", edgecolors="lightgray", linewidth=0.05)
+                plt.pcolormesh(grid + x, grid + y, box, cmap="Greens", edgecolors="lightgray", linewidth=0.05, norm=norm)
         plt.pcolormesh(np.arange(w) + 0.5, np.arange(h) + 0.5, self.field, cmap=cmap, edgecolors="gray", linewidth=0.1)
         plt.show()
         plt.tight_layout()
-        plt.savefig(f"Q_values_{str(self.epsilon)[2:]}.png", dpi=150)
+        if str(self.field_path)[-5] == "2":
+            plt.savefig(f"Q_values_0{str(self.epsilon)[2:]}_2.png", dpi=150)
+        else:
+            plt.savefig(f"Q_values_0{str(self.epsilon)[2:]}.png", dpi=150)
 
     def show_log(self) -> None:
         cmap = ListedColormap(["white", "skyblue", "pink", "black"])
-        _, ax = plt.subplots()
+        _, ax = plt.subplots(figsize=(10, 10))
         ax.set_aspect("equal")
         ax.set_xticks([])
         ax.set_yticks([])
@@ -175,11 +180,16 @@ class QLearning:
         plt.gca().invert_yaxis()
         plt.show()
         plt.tight_layout()
-        plt.savefig(f"Q_log_{str(self.epsilon)[2:]}.png", dpi=150)
+        if str(self.field_path)[-5] == "2":
+            plt.savefig(f"Q_log_0{str(self.epsilon)[2:]}_2.png", dpi=150)
+        else:
+            plt.savefig(f"Q_log_0{str(self.epsilon)[2:]}.png", dpi=150)
 
 
 if __name__ == "__main__":
     import sys
+
+    # python QLearning.py field.txt 0.2
 
     epsilon = float(sys.argv[2])
     seed(100)
@@ -198,4 +208,7 @@ if __name__ == "__main__":
     ax.text(0.7, 0.2, f"final step: {steps[-1]}", transform=ax.transAxes, size=18)
     plt.show()
     plt.tight_layout()
-    plt.savefig(f"Q_learning_{str(epsilon)[2:]}.png", dpi=150)
+    if str(field_path)[-5] == "2":
+        plt.savefig(f"Q_learning_0{str(epsilon)[2:]}_2.png", dpi=150)
+    else:
+        plt.savefig(f"QZ_learning_0{str(epsilon)[2:]}.png", dpi=150)

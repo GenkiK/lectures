@@ -105,7 +105,7 @@ class TD:
     def train(self) -> tuple[list[int], int]:
         least_repeat = 50
         max_repeat = 500
-        th = 0.1
+        th = 0.01
         episode_num = 0
         steps = []
         while episode_num < least_repeat:
@@ -131,7 +131,10 @@ class TD:
         plt.pcolormesh(self.field, cmap=cmap, edgecolors="gray", linewidth=0.1)
         plt.show()
         plt.tight_layout()
-        plt.savefig(f"TD_values_{str(self.epsilon)[2:]}.png", dpi=150)
+        if str(self.field_path)[-5] == "2":
+            plt.savefig(f"TD_values_0{str(self.epsilon)[2:]}_2.png", dpi=150)
+        else:
+            plt.savefig(f"TD_values_0{str(self.epsilon)[2:]}.png", dpi=150)
 
     def show_log(self) -> None:
         cmap = ListedColormap(["white", "skyblue", "pink", "black"])
@@ -156,11 +159,31 @@ class TD:
         plt.gca().invert_yaxis()
         plt.show()
         plt.tight_layout()
-        plt.savefig(f"TD_log_{str(self.epsilon)[2:]}.png", dpi=150)
+        if str(self.field_path)[-5] == "2":
+            plt.savefig(f"TD_log_0{str(self.epsilon)[2:]}_2.png", dpi=150)
+        else:
+            plt.savefig(f"TD_log_0{str(self.epsilon)[2:]}.png", dpi=150)
+
+    def show_field(self) -> None:
+        cmap = ListedColormap(["white", "skyblue", "pink", "black"])
+        _, ax = plt.subplots(figsize=(10, 10))
+        ax.set_aspect("equal")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.pcolormesh(self.field, cmap=cmap, edgecolors="gray", linewidth=0.1)
+        plt.gca().invert_yaxis()
+        plt.show()
+        plt.tight_layout()
+        if str(self.field_path)[-5] == "2":
+            plt.savefig(f"field2.png", dpi=150)
+        else:
+            plt.savefig(f"field.png", dpi=150)
 
 
 if __name__ == "__main__":
     import sys
+
+    # python TD.py field.txt 0.2
 
     epsilon = float(sys.argv[2])
 
@@ -170,6 +193,7 @@ if __name__ == "__main__":
     steps, episode_num = td.train()
     td.show_values()
     td.show_log()
+    td.show_field()
 
     _, ax = plt.subplots(figsize=(10, 6))
     ax.plot(np.arange(episode_num), steps, "-")
@@ -179,4 +203,7 @@ if __name__ == "__main__":
     ax.text(0.7, 0.2, f"final step: {steps[-1]}", transform=ax.transAxes, size=18)
     plt.show()
     plt.tight_layout()
-    plt.savefig(f"TD_learning_{str(epsilon)[2:]}.png", dpi=150)
+    if str(field_path)[-5] == "2":
+        plt.savefig(f"TD_learning_0{str(epsilon)[2:]}_2.png", dpi=150)
+    else:
+        plt.savefig(f"TD_learning_0{str(epsilon)[2:]}.png", dpi=150)
